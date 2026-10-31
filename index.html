@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROOM 09</title>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #050505;
+  color: #eee;
+  font-family: Arial, sans-serif;
+}
+
+button {
+  padding: 11px 16px;
+  margin: 4px;
+  color: #eee;
+  background: #252525;
+  border: 1px solid #777;
+  cursor: pointer;
+}
+button:hover { background: #444; }
+
+#atmosphere, #filmGrain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#atmosphere {
+  box-shadow: inset 0 0 120px 35px #000c;
+  background: radial-gradient(ellipse, transparent 35%, #0008);
+}
+
+#filmGrain {
+  opacity: .045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain .2s steps(2) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0,0); }
+  25% { transform: translate(2%,-1%); }
+  50% { transform: translate(-1%,2%); }
+  75% { transform: translate(1%,1%); }
+  100% { transform: translate(-2%,-1%); }
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#title {
+  position: absolute;
+  top: 20px;
+  left: 22px;
+  letter-spacing: 5px;
+}
+
+#objective {
+  position: absolute;
+  top: 50px;
+  left: 22px;
+  max-width: 330px;
+  font-size: 13px;
+  line-height: 1.6;
+  text-shadow: 0 2px 5px #000;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid white;
+  border-radius: 50%;
+  transform: translate(-50%,-50%);
+}
+
+#prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 17%;
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  background: #000d;
+  opacity: 0;
+  white-space: nowrap;
+}
+#prompt.show { opacity: 1; }
+
+#controls {
+  position: absolute;
+  bottom: 18px;
+  left: 22px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #ccc;
+  text-shadow: 0 2px 5px #000;
+}
+
+#message {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 13px 18px;
+  background: #000d;
+  text-align: center;
+  max-width: 85vw;
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #030404ed;
+}
+.screen.open { display: flex; }
+
+.panel {
+  width: min(460px,96vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  background: #111313;
+  border: 1px solid #555;
+  box-shadow: 0 0 45px #000;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 19px;
+  font-weight: normal;
+  letter-spacing: 4px;
+}
+
+.panel p {
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+#startScreen {
+  z-index: 20;
+  flex-direction: column;
+  text-align: center;
+  background: radial-gradient(ellipse,#242424,#050505 75%);
+}
+
+#startScreen h1 {
+  font-size: clamp(35px,8vw,70px);
+  font-weight: normal;
+  letter-spacing: 10px;
+}
+
+#startScreen p {
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+#startButton {
+  position: relative;
+  z-index: 30;
+  min-width: 190px;
+  padding: 16px 25px;
+  margin: 22px auto;
+  letter-spacing: 3px;
+  pointer-events: auto;
+}
+
+#notePaper {
+  padding: 20px;
+  background: #d0c6a8;
+  color: #29251e;
+  font-family: Georgia,serif;
+  font-style: italic;
+  line-height: 1.8;
+}
+
+#keyDisplay {
+  padding: 14px;
+  margin: 12px 0;
+  background: #050505;
+  border: 1px solid #555;
+  text-align: center;
+  font-size: 25px;
+  letter-spacing: 10px;
+}
+
+#keypad {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 6px;
+}
+#keypad button { min-height: 44px; margin: 0; }
+
+#cctvFeed {
+  height: 230px;
+  position: relative;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 3px,#fff1 4px),
+    radial-gradient(ellipse,#44483f,#050605 80%);
+  border: 2px solid #65685d;
+  filter: grayscale(1);
+}
+
+#cctvLabel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font: 12px monospace;
+}
+
+#figure {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 45px;
+  height: 125px;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 2s;
+}
+#figure::before {
+  content: "";
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin: auto;
+  border-radius: 50%;
+  background: black;
+}
+#figure::after {
+  content: "";
+  display: block;
+  width: 45px;
+  height: 90px;
+  background: black;
+  border-radius: 40% 40% 0 0;
+}
+#figure.visible { opacity: 1; }
+
+#scareScreen {
+  z-index: 40;
+  flex-direction: column;
+  gap: 25px;
+  background: #000;
+}
+
+#scareFace {
+  width: min(70vw,370px);
+  height: min(60vh,370px);
+  position: relative;
+  background: radial-gradient(ellipse,#292020,#000 72%);
+  animation: lunge .14s infinite alternate;
+}
+
+#scareFace::before {
+  content: "";
+  position: absolute;
+  inset: 15% 18% 10%;
+  border-radius: 48% 48% 40% 40%;
+  background: #080606;
+}
+
+.eye {
+  position: absolute;
+  top: 37%;
+  z-index: 1;
+  width: 20%;
+  height: 9%;
+  border-radius: 50%;
+  background: #eee5d7;
+  box-shadow: 0 0 22px white;
+}
+.eye.left { left: 26%; }
+.eye.right { right: 26%; }
+
+.mouth {
+  position: absolute;
+  top: 56%;
+  left: 36%;
+  z-index: 1;
+  width: 28%;
+  height: 21%;
+  border-radius: 50%;
+  background: black;
+  border-bottom: 5px solid #771414;
+}
+
+#scareText {
+  letter-spacing: 5px;
+  text-align: center;
+}
+
+#ending {
+  z-index: 50;
+  flex-direction: column;
+  text-align: center;
+  background: black;
+}
+#ending h1 {
+  font-size: clamp(25px,5vw,46px);
+  letter-spacing: 4px;
+}
+#ending p {
+  color: #888;
+  letter-spacing: 3px;
+}
+
+@keyframes lunge {
+  from { transform: scale(.9) rotate(-1deg); }
+  to { transform: scale(1.1) rotate(1deg); }
+}
+</style>
+</head>
+
+<body>
+<div id="atmosphere"></div>
+<div id="filmGrain"></div>
+
+<div id="hud">
+  <div id="title">ROOM 09</div>
+  <div id="objective">OBJECTIVE: Explore the room.</div>
+  <div id="crosshair"></div>
+  <div id="prompt"></div>
+  <div id="message"></div>
+  <div id="controls">
+    WASD — Move<br>
+    Mouse — Look<br>
+    E — Interact<br>
+    F — CCTV<br>
+    SHIFT — Run<br>
+    ESC — Release mouse
+  </div>
+</div>
+
+<div id="startScreen" class="screen open">
+  <h1>ROOM 09</h1>
+  <p>You woke up in a room you don't remember.</p>
+  <p>HEADPHONES RECOMMENDED</p>
+  <button id="startButton">ENTER ROOM</button>
+  <p id="startStatus">Click to begin.</p>
+  <p>WASD to move · Mouse to look around</p>
+</div>
+
+<div id="noteScreen" class="screen">
+  <div class="panel">
+    <h2>OLD NOTE</h2>
+    <div id="notePaper">
+      If you are reading this, you woke up too.<br><br>
+      The clock stopped at 03:17.<br>
+      Do not trust what you see on the camera.<br><br>
+      Find the keycard. The door remembers the time.
+    </div>
+    <button data-close="noteScreen">Close Note</button>
+  </div>
+</div>
+
+<div id="drawerScreen" class="screen">
+  <div class="panel">
+    <h2>BEDSIDE DRAWER</h2>
+    <p id="drawerText">Something metallic lies inside.</p>
+    <button id="takeCardButton">Take Keycard</button>
+    <button data-close="drawerScreen">Close</button>
+  </div>
+</div>
+
+<div id="keyScreen" class="screen">
+  <div class="panel">
+    <h2>ROOM 09 — KEYPAD</h2>
+    <p id="keyHint">Enter the time shown on the stopped clock.</p>
+    <div id="keyDisplay">----</div>
+    <div id="keypad">
+      <button data-digit="1">1</button>
+      <button data-digit="2">2</button>
+      <button data-digit="3">3</button>
+      <button data-digit="4">4</button>
+      <button data-digit="5">5</button>
+      <button data-digit="6">6</button>
+      <button data-digit="7">7</button>
+      <button data-digit="8">8</button>
+      <button data-digit="9">9</button>
+      <button data-key="clear">CLEAR</button>
+      <button data-digit="0">0</button>
+      <button data-key="back">⌫</button>
+    </div>
+    <button id="submitCodeButton">ENTER CODE</button>
+    <button data-close="keyScreen">Close Keypad</button>
+  </div>
+</div>
+
+<div id="cctvScreen" class="screen">
+  <div class="panel">
+    <h2>SECURITY FEED — CAM 09</h2>
+    <div id="cctvFeed">
+      <div id="cctvLabel">CAM 09 / LIVE</div>
+      <div id="figure"></div>
+    </div>
+    <p id="cctvMessage">The room appears empty.</p>
+    <button id="closeCCTVButton">Close CCTV</button>
+  </div>
+</div>
+
+<div id="hallScreen" class="screen">
+  <div class="panel">
+    <h2>THE HALLWAY</h2>
+    <p id="hallText">The EXIT sign flickers above a distant door.</p>
+    <button id="hallActionButton">Inspect Exit Sign</button>
+    <button data-close="hallScreen">Close</button>
+  </div>
+</div>
+
+<div id="scareScreen" class="screen">
+  <div id="scareFace">
+    <div class="eye left"></div>
+    <div class="eye right"></div>
+    <div class="mouth"></div>
+  </div>
+  <div id="scareText">DON'T LOOK AWAY</div>
+</div>
+
+<div id="ending" class="screen">
+  <h1>ROOM 09 IS NOW OCCUPIED.</h1>
+  <p>YOU WERE NEVER ALONE.</p>
+  <button onclick="location.reload()">PLAY AGAIN</button>
+</div>
+
+
+<script type="module">
+import * as THREE from 'three';
+import { PointerLockControls } from
+  'three/addons/controls/PointerLockControls.js';
+
+const $ = id => document.getElementById(id);
+
+const state = {
+  started: false,
+  noteRead: false,
+  keycard: false,
+  cctvSeen: false,
+  cctvScareDone: false,
+  doorUnlocked: false,
+  inHall: false,
+  hallClue: false,
+  finalScareDone: false,
+  keyBuffer: '',
+  panelOpen: false
+};
+
+let currentTarget = null;
+let messageTimer, cctvTimer, scareTimer;
+let held = {};
+let lastTime = 0;
+let lastStepAt = 0;
+let whisperCooldown = 0;
+let monsterCooldown = 0;
+let monsterState = 'hidden';
+let monsterVisibleTime = 0;
+let chaseTime = 0;
+let flickerTimer = 0;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050505);
+scene.fog = new THREE.Fog(0x050505, 5, 16);
+
+const camera = new THREE.PerspectiveCamera(
+  75, innerWidth / innerHeight, .1, 100
+);
+camera.position.set(0, 1.65, 3.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const controls = new PointerLockControls(camera, document.body);
+controls.pointerSpeed = .65;
+
+const ambientLight = new THREE.HemisphereLight(
+  0x777b86, 0x17120d, .45
+);
+scene.add(ambientLight);
+
+const lamp = new THREE.PointLight(0xffc98b, 30, 13, 1.8);
+lamp.position.set(0, 3.35, -.5);
+lamp.castShadow = true;
+lamp.shadow.mapSize.set(1024, 1024);
+lamp.shadow.camera.near = .5;
+lamp.shadow.camera.far = 14;
+scene.add(lamp);
+
+const coldFill = new THREE.PointLight(0x8294b0, 1.3, 10);
+coldFill.position.set(-3.8, 2.5, -3);
+scene.add(coldFill);
+
+const room = new THREE.Group();
+const hall = new THREE.Group();
+scene.add(room, hall);
+hall.visible = false;
+
+const raycaster = new THREE.Raycaster();
+raycaster.far = 3.5;
+const interactables = [];
+
+function mat(color, roughness = .9) {
+  return new THREE.MeshStandardMaterial({ color, roughness });
+}
+
+const wallMat = mat(0x38342f);
+const floorMat = mat(0x24211e);
+const woodMat = mat(0x493525);
+const darkMat = mat(0x111110);
+const paperMat = mat(0xcfc4a4);
+
+function box(group, name, x, y, z, w, h, d, material, action) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d), material
+  );
+  mesh.name = name;
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.interact = action || null;
+  group.add(mesh);
+  if (action) interactables.push(mesh);
+  return mesh;
+}
+
+// ROOM SHELL
+box(room, 'Floor', 0, -.12, 0, 10, .2, 10, floorMat);
+box(room, 'Ceiling', 0, 4, 0, 10, .2, 10, darkMat);
+box(room, 'Back Wall', 0, 2, -5, 10, 4, .2, wallMat);
+box(room, 'Left Wall', -5, 2, 0, .2, 4, 10, wallMat);
+box(room, 'Right Wall', 5, 2, 0, .2, 4, 10, wallMat);
+box(room, 'Front Wall', 0, 2, 5, 10, 4, .2, wallMat);
+
+// BED
+box(room, 'Bed Frame', 0, .4, -1.7, 2.7, .6, 3, darkMat);
+box(room, 'Mattress', 0, .76, -1.7, 2.55, .16, 2.9,
+  mat(0x777064));
+box(room, 'Pillow', 0, .88, -2.85, 1.15, .12, .45,
+  mat(0xb2aa9b));
+
+// DESK
+box(room, 'Desk', -3.15, .78, -2.5, 1.5, .15, .9, woodMat);
+box(room, 'Desk Leg', -3.7, .38, -2.5, .1, .8, .1, woodMat);
+box(room, 'Desk Leg', -2.6, .38, -2.5, .1, .8, .1, woodMat);
+
+box(room, 'Old Note', -3.15, .89, -2.5, .48, .035, .32,
+  paperMat, () => {
+    state.noteRead = true;
+    updateObjective();
+    soundTone(340, .12, .025);
+    openPanel('noteScreen');
+  });
+
+box(room, 'Drawer', -3.15, .53, -1.8, .95, .3, .5,
+  woodMat, () => openPanel('drawerScreen'));
+
+// CLOCK
+const clock = new THREE.Mesh(
+  new THREE.CylinderGeometry(.38, .38, .1, 32),
+  mat(0xbdb5a1)
+);
+clock.name = 'Stopped Clock';
+clock.rotation.x = Math.PI / 2;
+clock.position.set(0, 2.6, -4.82);
+clock.userData.interact = () =>
+  showMessage('The clock is frozen at 03:17.');
+clock.castShadow = true;
+room.add(clock);
+interactables.push(clock);
+
+// DOOR
+box(room, 'Room Door', 3.25, 1.5, -4.82, 1.45, 3, .18,
+  woodMat, () => {
+    if (!state.keycard) {
+      showMessage('LOCKED. Search the drawer for a keycard.');
+    } else if (!state.noteRead) {
+      showMessage('Read the note before trying the door.');
+    } else if (!state.doorUnlocked) {
+      state.keyBuffer = '';
+      updateKeyDisplay();
+      $('keyHint').textContent =
+        'Enter the time shown on the stopped clock.';
+      openPanel('keyScreen');
+    } else {
+      enterHall();
+    }
+  });
+
+// CCTV CAMERA
+box(room, 'CCTV Camera', -4.7, 3, -2.3, .35, .25, .5,
+  mat(0x55554f), () => openCCTV());
+
+// HALLWAY
+box(hall, 'Hall Floor', 0, -.12, -5, 4, .2, 20, floorMat);
+box(hall, 'Hall Ceiling', 0, 3.5, -5, 4, .2, 20, darkMat);
+box(hall, 'Hall Left Wall', -2, 1.7, -5, .2, 3.5, 20, wallMat);
+box(hall, 'Hall Right Wall', 2, 1.7, -5, .2, 3.5, 20, wallMat);
+box(hall, 'Hall End Wall', 0, 1.7, -15, 4, 3.5, .2, wallMat);
+
+box(hall, 'EXIT Sign', 0, 2.5, -14.8, 1.1, .35, .08,
+  mat(0x8b2020), () => inspectExit());
+
+const hallLight = new THREE.PointLight(0xb82c22, 7, 9);
+hallLight.position.set(0, 2.8, -8);
+hall.add(hallLight);
+
+// MONSTER MODEL
+const monster = new THREE.Group();
+monster.name = 'The Visitor';
+
+const monsterBlack = new THREE.MeshStandardMaterial({
+  color: 0x050505,
+  roughness: 1
+});
+
+const monsterSkin = new THREE.MeshStandardMaterial({
+  color: 0x171313,
+  roughness: 1
+});
+
+const eyeMat = new THREE.MeshBasicMaterial({
+  color: 0xffdddd
+});
+
+function monsterPart(geometry, material, x, y, z) {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  monster.add(mesh);
+  return mesh;
+}
+
+// Tall, thin body
+monsterPart(
+  new THREE.CylinderGeometry(.19, .28, 1.35, 8),
+  monsterBlack, 0, 1.05, 0
+);
+
+// Head
+monsterPart(
+  new THREE.SphereGeometry(.23, 12, 10),
+  monsterSkin, 0, 1.88, 0
+);
+
+// Long arms
+monsterPart(
+  new THREE.CylinderGeometry(.055, .075, .95, 6),
+  monsterBlack, -.29, 1.05, 0
+).rotation.z = -.12;
+
+monsterPart(
+  new THREE.CylinderGeometry(.055, .075, .95, 6),
+  monsterBlack, .29, 1.05, 0
+).rotation.z = .12;
+
+// Legs
+monsterPart(
+  new THREE.CylinderGeometry(.07, .09, .85, 6),
+  monsterBlack, -.12, .32, 0
+);
+
+monsterPart(
+  new THREE.CylinderGeometry(.07, .09, .85, 6),
+  monsterBlack, .12, .32, 0
+);
+
+// Eyes face toward local +Z
+monsterPart(
+  new THREE.SphereGeometry(.035, 8, 8),
+  eyeMat, -.085, 1.91, .205
+);
+
+monsterPart(
+  new THREE.SphereGeometry(.035, 8, 8),
+  eyeMat, .085, 1.91, .205
+);
+
+monster.visible = false;
+scene.add(monster);
+
+// Monster state machine
+const monsterData = {
+  active: false,
+  mode: 'dormant',
+  target: new THREE.Vector3(),
+  speed: 1.15,
+  seen: false,
+  sightings: 0,
+  lastSeen: 0,
+  chaseStarted: false
+};
+
+// AUDIO SYSTEM
+let ambience = null;
+
+function initAudio() {
+  if (ambience) {
+    if (ambience.ctx.state === 'suspended') {
+      ambience.ctx.resume();
+    }
+    return;
+  }
+
+  const AudioContext =
+    window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContext) return;
+
+  const ctx = new AudioContext();
+  const master = ctx.createGain();
+  master.gain.value = .32;
+  master.connect(ctx.destination);
+
+  const drone = ctx.createOscillator();
+  const droneGain = ctx.createGain();
+  drone.type = 'sine';
+  drone.frequency.value = 48;
+  droneGain.gain.value = .045;
+  drone.connect(droneGain);
+  droneGain.connect(master);
+  drone.start();
+
+  const hum = ctx.createOscillator();
+  const humGain = ctx.createGain();
+  hum.type = 'sawtooth';
+  hum.frequency.value = 60;
+  humGain.gain.value = .018;
+  hum.connect(humGain);
+  humGain.connect(master);
+  hum.start();
+
+  ambience = {
+    ctx, master, drone, droneGain, hum, humGain
+  };
+
+  ctx.resume();
+}
+
+function soundTone(
+  frequency = 100,
+  duration = .3,
+  volume = .08,
+  type = 'sine'
+) {
+  if (!ambience) return;
+
+  const ctx = ambience.ctx;
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(
+    frequency, ctx.currentTime
+  );
+
+  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(
+    .001, ctx.currentTime + duration
+  );
+
+  oscillator.connect(gain);
+  gain.connect(ambience.master);
+
+  oscillator.start();
+  oscillator.stop(ctx.currentTime + duration);
+}
+
+function playFootstep() {
+  if (!ambience) return;
+
+  const ctx = ambience.ctx;
+  const duration = .09;
+  const buffer = ctx.createBuffer(
+    1, ctx.sampleRate * duration, ctx.sampleRate
+  );
+
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) *
+      (1 - i / data.length);
+  }
+
+  const source = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  filter.type = 'lowpass';
+  filter.frequency.value = 180;
+  gain.gain.value = .13;
+
+  source.buffer = buffer;
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ambience.master);
+  source.start();
+}
+
+function playWhisper() {
+  soundTone(180 + Math.random() * 100, .7, .018, 'triangle');
+
+  setTimeout(() => {
+    soundTone(95 + Math.random() * 50, .5, .012);
+  }, 250);
+}
+
+function monsterSound() {
+  soundTone(48, .8, .10, 'sawtooth');
+  setTimeout(() => soundTone(72, .6, .055), 180);
+}
+
+// UI HELPERS
+function showMessage(text, duration = 3000) {
+  $('message').textContent = text;
+  clearTimeout(messageTimer);
+  messageTimer = setTimeout(() => {
+    $('message').textContent = '';
+  }, duration);
+}
+
+function updateObjective() {
+  let text;
+
+  if (!state.noteRead) text = 'OBJECTIVE: Inspect the note on the desk.';
+  else if (!state.keycard) text = 'OBJECTIVE: Search the bedside drawer.';
+  else if (!state.cctvSeen) text = 'OBJECTIVE: Check the CCTV. Press F.';
+  else if (!state.doorUnlocked) text = 'OBJECTIVE: Enter code 0317 on the door.';
+  else if (!state.inHall) text = 'OBJECTIVE: Open the door and enter the hallway.';
+  else if (!state.hallClue) text = 'OBJECTIVE: Inspect the EXIT sign.';
+  else text = 'OBJECTIVE: Follow the hallway to the end.';
+
+  $('objective').textContent = text;
+}
+
+function openPanel(id) {
+  state.panelOpen = true;
+  held = {};
+  $('prompt').classList.remove('show');
+
+  if (controls.isLocked) controls.unlock();
+
+  document.querySelectorAll('.screen').forEach(screen => {
+    if (!['startScreen','scareScreen','ending'].includes(screen.id)) {
+      screen.classList.remove('open');
+    }
+  });
+
+  $(id).classList.add('open');
+}
+
+function closePanel(id) {
+  $(id).classList.remove('open');
+  state.panelOpen = false;
+  held = {};
+  $('prompt').classList.remove('show');
+
+  if (state.started && !controls.isLocked) controls.lock();
+}
+
+document.querySelectorAll('[data-close]').forEach(button => {
+  button.addEventListener('click', () => {
+    closePanel(button.dataset.close);
+  });
+});
+
+// START
+$('startButton').addEventListener('click', () => {
+  initAudio();
+  controls.lock();
+  $('startStatus').textContent = 'Click to resume the game.';
+});
+
+controls.addEventListener('lock', () => {
+  state.started = true;
+  $('startScreen').classList.remove('open');
+});
+
+controls.addEventListener('unlock', () => {
+  held = {};
+  if (!state.started) $('startScreen').classList.add('open');
+});
+
+renderer.domElement.addEventListener('click', () => {
+  if (
+    state.started &&
+    !state.panelOpen &&
+    !$('scareScreen').classList.contains('open') &&
+    !$('ending').classList.contains('open') &&
+    !controls.isLocked
+  ) {
+    controls.lock();
+  }
+});
+
+// KEYCARD
+$('takeCardButton').addEventListener('click', () => {
+  state.keycard = true;
+  $('drawerText').textContent = 'Keycard acquired.';
+  $('takeCardButton').style.display = 'none';
+
+  soundTone(620, .16, .06);
+  closePanel('drawerScreen');
+  showMessage('You found a ROOM 09 keycard.');
+  updateObjective();
+});
+
+// KEYPAD
+function updateKeyDisplay() {
+  $('keyDisplay').textContent = state.keyBuffer.padEnd(4, '-');
+}
+
+function pressKey(value) {
+  if (!$('keyScreen').classList.contains('open')) return;
+
+  if (value === 'clear') state.keyBuffer = '';
+  else if (value === 'back') state.keyBuffer = state.keyBuffer.slice(0, -1);
+  else if (/^\d$/.test(value) && state.keyBuffer.length < 4) {
+    state.keyBuffer += value;
+  }
+
+  updateKeyDisplay();
+}
+
+document.querySelectorAll('[data-digit]').forEach(button => {
+  button.addEventListener('click', () => pressKey(button.dataset.digit));
+});
+
+document.querySelectorAll('[data-key]').forEach(button => {
+  button.addEventListener('click', () => pressKey(button.dataset.key));
+});
+
+function submitCode() {
+  if (!$('keyScreen').classList.contains('open')) return;
+
+  if (state.keyBuffer === '0317') {
+    state.doorUnlocked = true;
+    state.keyBuffer = '';
+
+    soundTone(420, .22, .08);
+    closePanel('keyScreen');
+
+    showMessage('ACCESS GRANTED. The door lock clicks open.', 3500);
+    updateObjective();
+  } else {
+    soundTone(115, .28, .08, 'sawtooth');
+
+    $('keyHint').textContent =
+      'ACCESS DENIED. The correct code is the time on the clock.';
+
+    state.keyBuffer = '';
+    updateKeyDisplay();
+  }
+}
+
+$('submitCodeButton').addEventListener('click', submitCode);
+
+
+// MONSTER AI
+function playerCanSeeMonster() {
+  if (!monster.visible) return false;
+
+  const toMonster = new THREE.Vector3()
+    .subVectors(monster.position, camera.position);
+
+  const distance = toMonster.length();
+
+  if (distance > 18) return false;
+
+  toMonster.normalize();
+
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+
+  return direction.dot(toMonster) > .88;
+}
+
+function placeMonsterInFront(distance = 9) {
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+  direction.y = 0;
+  direction.normalize();
+
+  monster.position.copy(camera.position)
+    .add(direction.multiplyScalar(distance));
+
+  monster.position.y = 0;
+
+  if (state.inHall) {
+    monster.position.x = THREE.MathUtils.clamp(
+      monster.position.x, -1.3, 1.3
+    );
+    monster.position.z = THREE.MathUtils.clamp(
+      monster.position.z, -14, 2.5
+    );
+  } else {
+    monster.position.x = THREE.MathUtils.clamp(
+      monster.position.x, -4, 4
+    );
+    monster.position.z = THREE.MathUtils.clamp(
+      monster.position.z, -4, 4
+    );
+  }
+
+  monster.lookAt(
+    camera.position.x,
+    1.4,
+    camera.position.z
+  );
+}
+
+function spawnMonster(mode = 'sighting') {
+  if (monsterData.active || state.panelOpen) return;
+
+  monsterData.active = true;
+  monsterData.mode = mode;
+
+  monster.visible = true;
+
+  if (mode === 'sighting') {
+    placeMonsterInFront(9);
+    monsterData.speed = 0;
+    monsterVisibleTime = 2.2;
+    showMessage('Something is standing in the darkness...', 2200);
+    soundTone(65, .8, .045, 'sawtooth');
+  }
+
+  if (mode === 'stalking') {
+    placeMonsterInFront(11);
+    monsterData.speed = 1.05;
+    monsterVisibleTime = 0;
+    monsterSound();
+  }
+
+  if (mode === 'chase') {
+    placeMonsterInFront(8);
+    monsterData.speed = 2.7;
+    monsterData.chaseStarted = true;
+    chaseTime = 0;
+    monsterSound();
+    showMessage('RUN. IT FOUND YOU.', 2500);
+  }
+
+  monsterData.lastSeen = performance.now();
+}
+
+function hideMonster() {
+  monster.visible = false;
+  monsterData.active = false;
+  monsterData.mode = 'dormant';
+  monsterData.speed = 1.05;
+}
+
+function updateMonster(dt, time) {
+  if (!state.started || state.panelOpen) return;
+  if ($('scareScreen').classList.contains('open')) return;
+  if ($('ending').classList.contains('open')) return;
+
+  // Don't allow random monster encounters before CCTV.
+  if (!state.cctvSeen) return;
+
+  const distance = monster.position.distanceTo(camera.position);
+  const playerLooking = playerCanSeeMonster();
+
+  // Cooldown between appearances.
+  monsterCooldown = Math.max(0, monsterCooldown - dt);
+
+  // First sightings: short appearances in the room.
+  if (!monsterData.active && monsterCooldown <= 0) {
+    const chance = state.inHall ? .0018 : .00075;
+
+    if (Math.random() < chance) {
+      spawnMonster('sighting');
+      monsterCooldown = 13;
+      return;
+    }
+  }
+
+  if (!monsterData.active) return;
+
+  // Monster freezes when watched.
+  if (playerLooking && monsterData.mode !== 'chase') {
+    monsterData.seen = true;
+    monsterData.lastSeen = time;
+
+    if (monsterData.mode === 'stalking') {
+      monsterData.mode = 'sighting';
+      monsterData.speed = 0;
+    }
+  }
+
+  // Brief sighting, then disappear if the player looks away.
+  if (monsterData.mode === 'sighting') {
+    monsterVisibleTime -= dt;
+
+    if (
+      monsterVisibleTime <= 0 &&
+      !playerLooking
+    ) {
+      hideMonster();
+      monsterCooldown = 10;
+      return;
+    }
+
+    if (
+      monsterVisibleTime <= -1.5 &&
+      playerLooking
+    ) {
+      hideMonster();
+      monsterCooldown = 12;
+      return;
+    }
+  }
+
+  // Stalking: slowly moves toward the player when unseen.
+  if (monsterData.mode === 'stalking') {
+    if (!playerLooking) {
+      const direction = new THREE.Vector3()
+        .subVectors(camera.position, monster.position);
+
+      direction.y = 0;
+
+      const len = direction.length();
+
+      if (len > 0.001) {
+        direction.normalize();
+
+        monster.position.addScaledVector(
+          direction,
+          monsterData.speed * dt
+        );
+
+        monster.lookAt(
+          camera.position.x,
+          1.4,
+          camera.position.z
+        );
+      }
+
+      if (distance < 3.2) {
+        triggerScare(false);
+        hideMonster();
+        return;
+      }
+    } else {
+      monsterData.lastSeen = time;
+    }
+  }
+
+  // Chase mode: monster moves even when watched.
+  if (monsterData.mode === 'chase') {
+    chaseTime += dt;
+
+    const direction = new THREE.Vector3()
+      .subVectors(camera.position, monster.position);
+
+    direction.y = 0;
+
+    const len = direction.length();
+
+    if (len > .001) {
+      direction.normalize();
+
+      monster.position.addScaledVector(
+        direction,
+        monsterData.speed * dt
+      );
+
+      monster.lookAt(
+        camera.position.x,
+        1.4,
+        camera.position.z
+      );
+    }
+
+    if (distance < 1.7) {
+      hideMonster();
+      triggerScare(false);
+      return;
+    }
+
+    // If the monster fails to catch the player,
+    // it disappears after a short chase.
+    if (chaseTime > 9) {
+      hideMonster();
+      monsterCooldown = 15;
+      showMessage('The footsteps fade into the darkness.', 3000);
+    }
+  }
+
+  // Subtle body movement.
+  if (monster.visible) {
+    monster.position.y =
+      Math.sin(time * .003) * .035;
+
+    monster.rotation.z =
+      Math.sin(time * .0015) * .025;
+  }
+}
+
+// Random encounter progression.
+function updateMonsterProgression(dt) {
+  if (!state.cctvSeen || !state.started) return;
+  if (state.panelOpen || state.inHall) return;
+  if (monsterData.active) return;
+
+  whisperCooldown -= dt;
+
+  // After a few seconds, enable occasional stalking.
+  if (
+    state.keycard &&
+    state.cctvSeen &&
+    whisperCooldown <= 0 &&
+    monsterCooldown <= 0 &&
+    Math.random() < .0006
+  ) {
+    spawnMonster('stalking');
+    monsterCooldown = 18;
+    whisperCooldown = 12;
+  }
+}
+
+// CCTV
+function openCCTV() {
+  if (state.inHall || state.panelOpen) return;
+
+  if (!state.keycard) {
+    showMessage('Search the drawer first.');
+    return;
+  }
+
+  state.cctvSeen = true;
+  updateObjective();
+
+  $('figure').classList.remove('visible');
+  $('cctvLabel').textContent = 'CAM 09 / LIVE';
+  $('cctvMessage').textContent = 'The room appears empty.';
+
+  openPanel('cctvScreen');
+
+  clearTimeout(cctvTimer);
+  clearTimeout(scareTimer);
+
+  cctvTimer = setTimeout(() => {
+    if (!$('cctvScreen').classList.contains('open')) return;
+
+    $('figure').classList.add('visible');
+
+    $('cctvLabel').textContent =
+      'CAM 09 / MOTION DETECTED';
+
+    $('cctvMessage').textContent =
+      'A figure is standing behind the bed. It was not there before.';
+
+    soundTone(75, .8, .08, 'sawtooth');
+
+    if (!state.cctvScareDone) {
+      scareTimer = setTimeout(() => {
+        if (!$('cctvScreen').classList.contains('open')) return;
+
+        state.cctvScareDone = true;
+        closePanel('cctvScreen');
+        triggerScare(false);
+      }, 6500);
+    }
+  }, 3500);
+}
+
+function closeCCTV() {
+  clearTimeout(cctvTimer);
+  clearTimeout(scareTimer);
+  closePanel('cctvScreen');
+}
+
+$('closeCCTVButton').addEventListener('click', closeCCTV);
+
+// HALLWAY
+function enterHall() {
+  state.inHall = true;
+
+  room.visible = false;
+  hall.visible = true;
+
+  camera.position.set(0, 1.65, 3.5);
+  camera.rotation.set(0, 0, 0);
+
+  scene.background = new THREE.Color(0x080808);
+  scene.fog = new THREE.Fog(0x080808, 4, 14);
+
+  ambientLight.intensity = .22;
+  lamp.intensity = 0;
+
+  showMessage('The door closes behind you.');
+  updateObjective();
+
+  // A distant figure may appear after entering the hall.
+  setTimeout(() => {
+    if (state.inHall && !state.panelOpen) {
+      spawnMonster('sighting');
+    }
+  }, 5000);
+}
+
+function inspectExit() {
+  if (!state.hallClue) {
+    state.hallClue = true;
+
+    $('hallText').textContent =
+      'The arrow points back toward ROOM 09. Something moves behind you.';
+
+    $('hallActionButton').textContent =
+      'Continue Down Hallway';
+
+    soundTone(110, .4, .07, 'triangle');
+
+    openPanel('hallScreen');
+    updateObjective();
+  } else {
+    closePanel('hallScreen');
+
+    // The final encounter begins when the player commits to the hallway.
+    setTimeout(() => {
+      if (!state.finalScareDone) {
+        spawnMonster('chase');
+      }
+    }, 900);
+  }
+}
+
+$('hallActionButton').addEventListener('click', () => {
+  if (!state.hallClue) {
+    state.hallClue = true;
+
+    $('hallText').textContent =
+      'The arrow points backward. You hear footsteps behind you.';
+
+    $('hallActionButton').textContent =
+      'Continue Down Hallway';
+
+    updateObjective();
+  } else {
+    closePanel('hallScreen');
+
+    setTimeout(() => {
+      if (!state.finalScareDone) {
+        spawnMonster('chase');
+      }
+    }, 900);
+  }
+});
+
+// JUMPSCARES
+function triggerScare(finalScare) {
+  if (finalScare && state.finalScareDone) return;
+  if (!finalScare && state.cctvScareDone) return;
+
+  if (finalScare) state.finalScareDone = true;
+  else state.cctvScareDone = true;
+
+  soundTone(
+    finalScare ? 42 : 58,
+    finalScare ? .9 : .5,
+    .18,
+    'sawtooth'
+  );
+
+  $('scareText').textContent = finalScare
+    ? 'YOU SHOULD NOT HAVE COME HERE'
+    : 'DON’T LOOK AWAY';
+
+  $('scareScreen').classList.add('open');
+
+  clearTimeout(scareTimer);
+
+  scareTimer = setTimeout(() => {
+    $('scareScreen').classList.remove('open');
+
+    if (finalScare) {
+      $('ending').classList.add('open');
+    } else {
+      showMessage('The CCTV signal has been lost.');
+    }
+  }, finalScare ? 1800 : 1200);
+}
+
+// INPUT
+const movementKeys = new Set([
+  'w','a','s','d','shift',
+  'arrowup','arrowdown','arrowleft','arrowright'
+]);
+
+document.addEventListener('keydown', event => {
+  const key = event.key.toLowerCase();
+
+  if (movementKeys.has(key)) event.preventDefault();
+
+  if (state.panelOpen) {
+    if ($('keyScreen').classList.contains('open')) {
+      if (/^\d$/.test(event.key)) pressKey(event.key);
+
+      if (event.key === 'Backspace') {
+        event.preventDefault();
+        pressKey('back');
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        submitCode();
+      }
+    }
+
+    if (event.key === 'Escape') {
+      const open = document.querySelector(
+        '.screen.open:not(#startScreen):not(#scareScreen):not(#ending)'
+      );
+
+      if (open) {
+        if (open.id === 'cctvScreen') closeCCTV();
+        else closePanel(open.id);
+      }
+    }
+
+    return;
+  }
+
+  held[key] = true;
+
+  if (key === 'e' && controls.isLocked && currentTarget) {
+    currentTarget.userData.interact?.();
+  }
+
+  if (key === 'f' && controls.isLocked) {
+    openCCTV();
+  }
+});
+
+document.addEventListener('keyup', event => {
+  held[event.key.toLowerCase()] = false;
+});
+
+window.addEventListener('blur', () => held = {});
+
+// COLLISION
+function blocked(x, z) {
+  if (x < -4.55 || x > 4.55 || z < -4.55 || z > 4.55) {
+    return true;
+  }
+
+  const bed =
+    Math.abs(x) < 1.6 &&
+    z > -3.4 && z < 0;
+
+  const desk =
+    x > -4.1 && x < -2.2 &&
+    z > -3.1 && z < -1.8;
+
+  const door =
+    x > 2.4 && x < 4.1 && z < -4.25;
+
+  return bed || desk || door;
+}
+
+// INTERACTION TARGET
+function updateTarget() {
+  if (
+    !controls.isLocked ||
+    state.panelOpen ||
+    $('scareScreen').classList.contains('open') ||
+    $('ending').classList.contains('open')
+  ) {
+    currentTarget = null;
+    $('prompt').classList.remove('show');
+    return;
+  }
+
+  raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+
+  const active = interactables.filter(object =>
+    object.parent &&
+    object.parent.visible &&
+    object.userData.interact
+  );
+
+  const hits = raycaster.intersectObjects(active, false);
+  currentTarget = hits.length ? hits[0].object : null;
+
+  if (currentTarget) {
+    $('prompt').textContent =
+      '[E] Interact: ' + currentTarget.name;
+    $('prompt').classList.add('show');
+  } else {
+    $('prompt').classList.remove('show');
+  }
+}
+
+// MAIN LOOP
+function animate(time) {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(
+    (time - lastTime) / 1000 || 0,
+    .05
+  );
+
+  lastTime = time;
+
+  // ROOM LIGHT FLICKER
+  if (!state.inHall) {
+    lamp.intensity = Math.random() < .025
+      ? 3 + Math.random() * 5
+      : 30;
+  } else {
+    flickerTimer += dt;
+
+    if (flickerTimer > .1) {
+      flickerTimer = 0;
+      hallLight.intensity =
+        Math.random() < .08 ? .15 : 7;
+    }
+  }
+
+  // PLAYER MOVEMENT
+  if (controls.isLocked && !state.panelOpen) {
+    const speed = held['shift'] ? 4.2 : 2.3;
+
+    let forward = 0;
+    let sideways = 0;
+
+    if (held['w'] || held['arrowup']) forward++;
+    if (held['s'] || held['arrowdown']) forward--;
+    if (held['d'] || held['arrowright']) sideways++;
+    if (held['a'] || held['arrowleft']) sideways--;
+
+    const length = Math.hypot(forward, sideways) || 1;
+    forward /= length;
+    sideways /= length;
+
+    const oldX = camera.position.x;
+    const oldZ = camera.position.z;
+
+    if (forward) controls.moveForward(forward * speed * dt);
+    if (sideways) controls.moveRight(sideways * speed * dt);
+
+    if (
+      !state.inHall &&
+      blocked(camera.position.x, camera.position.z)
+    ) {
+      camera.position.x = oldX;
+      camera.position.z = oldZ;
+    }
+
+    if (state.inHall) {
+      camera.position.x = THREE.MathUtils.clamp(
+        camera.position.x, -1.65, 1.65
+      );
+
+      camera.position.z = THREE.MathUtils.clamp(
+        camera.position.z, -14.5, 3.7
+      );
+
+      if (
+        camera.position.z < -13.5 &&
+        state.hallClue &&
+        !monsterData.active &&
+        !state.finalScareDone
+      ) {
+        spawnMonster('chase');
+      }
+    }
+
+    camera.position.y = 1.65;
+
+    const moving = forward !== 0 || sideways !== 0;
+
+    if (
+      moving &&
+      time - lastStepAt > (held['shift'] ? 300 : 470)
+    ) {
+      playFootstep();
+      lastStepAt = time;
+    }
+  }
+
+  // MONSTER AI
+  updateMonster(dt, time);
+  updateMonsterProgression(dt);
+
+  // RANDOM WHISPERS
+  if (
+    state.started &&
+    !state.panelOpen &&
+    Math.random() < .0008
+  ) {
+    playWhisper();
+  }
+
+  updateTarget();
+  renderer.render(scene, camera);
+}
+
+// RESIZE
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+updateObjective();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
+
